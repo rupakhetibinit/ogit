@@ -1,0 +1,1 @@
+# A git clone(hah) built with Odin lang for learning purposes
