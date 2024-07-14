@@ -1,17 +1,21 @@
 package main
 
+import sha "core:crypto/hash"
+import "core:encoding/hex"
 import "core:fmt"
 import "core:io"
 import "core:os"
+import "core:strings"
 
 main :: proc() {
 	args := os.args
+	// skip the first arg because it's the path of the file
 	args = args[1:]
 	switch args[0] {
 	case "init":
-		init(args[1])
+		init()
 	case "cat-file":
-		cat_file(args[1])
+	// cat_file(args[1])
 	case "check-ignore":
 	// cmd_check_ignore(args)
 	case "checkout":
@@ -19,6 +23,7 @@ main :: proc() {
 	case "commit":
 	// cmd_commit(args)
 	case "hash-object":
+		cmd_hash_object(args[1])
 	// cmd_hash_object(args)
 	case "log":
 	// cmd_log(args)
@@ -42,21 +47,36 @@ main :: proc() {
 }
 
 
-init :: proc(location_name: string) {
-	if (location_name == ".") {
-		os.change_directory("test")
-		os.make_directory(".git")
-		fmt.printfln(
-			"Successfully initialized git repository at current location %v",
-			location_name,
-		)
-	}
+init :: proc() {
+	os.change_directory("test")
+	os.make_directory(".ogit")
+	os.change_directory(".ogit")
+	os.make_directory("objects")
+	fmt.printfln("Successfully initialized git repository at current location")
 }
 
-cat_file :: proc(file: string) {
-	data, ok := os.read_entire_file_from_filename(file)
-	if (!ok) {
-		fmt.println("sucks")
+cmd_hash_object :: proc(file_name: string) {
+	path := ".ogit/objects/"
+	os.change_directory("test")
+
+	data, ok := os.read_entire_file_from_filename(file_name)
+	if !ok {
+		fmt.println("Failed to read file:", file_name)
+		fmt.println("Current directory:", os.get_current_directory())
+		os.exit(1)
 	}
-	fmt.println(string(data))
+
+	hash := sha.hash(sha.Algorithm.SHA256, data)
+	hash_str := hex.encode(hash)
+
+	final_path := fmt.aprintf("%s%s", path, hash_str)
+	defer free(&final_path)
+	success := os.write_entire_file(final_path, data)
+
+	if (!success) {
+		fmt.println("failed to save to git objects")
+	}
+
+
+	defer os.exit(0)
 }
