@@ -1,5 +1,9 @@
 package main
 
+TEST_DIRECTORY :: "test"
+GIT_OJBECTS_DIR :: ".ogit/objects"
+
+
 import sha "core:crypto/hash"
 import "core:encoding/hex"
 import "core:fmt"
@@ -12,11 +16,12 @@ main :: proc() {
 	args := os.args
 	// skip the first arg because it's the path of the file
 	args = args[1:]
+	// fmt.println(args)
 	switch args[0] {
 	case "init":
 		init()
 	case "cat-file":
-	// cat_file(args[1])
+		cmd_cat_file(args[1])
 	case "check-ignore":
 	// cmd_check_ignore(args)
 	case "checkout":
@@ -84,6 +89,28 @@ cmd_hash_object :: proc(file_name: string) {
 		fmt.println("failed to save to git objects")
 		os.exit(1)
 	}
+
+	fmt.println(string(hash_str))
 	defer os.exit(0)
 
+}
+
+cmd_cat_file :: proc(hash_str: string) {
+	hash := get_object(string(hash_str))
+	defer delete(hash)
+	fmt.println(string(hash))
+}
+
+get_object :: proc(hash: string) -> []u8 {
+	os.change_directory(TEST_DIRECTORY)
+
+	path := fmt.aprintf("%s/%s", GIT_OJBECTS_DIR, hash)
+	defer delete(path)
+	data, ok := os.read_entire_file(path)
+
+	if (!ok) {
+		fmt.println("\nFailed to cat-file")
+		os.exit(1)
+	}
+	return data
 }
