@@ -4,6 +4,7 @@ import sha "core:crypto/hash"
 import "core:encoding/hex"
 import "core:fmt"
 import "core:io"
+import "core:mem"
 import "core:os"
 import "core:strings"
 
@@ -57,6 +58,7 @@ init :: proc() {
 
 cmd_hash_object :: proc(file_name: string) {
 	path := ".ogit/objects"
+	defer delete(path)
 	os.change_directory("test")
 
 	data, ok := os.read_entire_file_from_filename(file_name)
@@ -65,18 +67,23 @@ cmd_hash_object :: proc(file_name: string) {
 		fmt.println("Current directory:", os.get_current_directory())
 		os.exit(1)
 	}
+	defer delete(data)
 
 	hash := sha.hash(sha.Algorithm.SHA256, data)
+	defer delete(hash)
+
 	hash_str := hex.encode(hash)
+	defer delete(hash_str)
 
 	final_path := fmt.aprintf("%s/%s", path, hash_str)
 	defer delete(final_path)
+
 	success := os.write_entire_file(final_path, data)
 
 	if (!success) {
 		fmt.println("failed to save to git objects")
 		os.exit(1)
 	}
-
 	defer os.exit(0)
+
 }
