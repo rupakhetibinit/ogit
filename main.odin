@@ -4,6 +4,7 @@ TEST_DIRECTORY :: "test"
 GIT_OJBECTS_DIR :: ".ogit/objects"
 
 
+import "core:bytes"
 import sha "core:crypto/hash"
 import "core:encoding/hex"
 import "core:fmt"
@@ -58,10 +59,10 @@ init :: proc() {
 	os.make_directory(".ogit")
 	os.change_directory(".ogit")
 	os.make_directory("objects")
-	fmt.printfln("Successfully initialized git repository at current location")
+	fmt.printfln("Successfully initialized ogit repository at current location")
 }
 
-cmd_hash_object :: proc(file_name: string) {
+cmd_hash_object :: proc(file_name: string, type := "blob") {
 	path := ".ogit/objects"
 	defer delete(path)
 	os.change_directory("test")
@@ -74,23 +75,23 @@ cmd_hash_object :: proc(file_name: string) {
 	}
 	defer delete(data)
 
-	hash := sha.hash(sha.Algorithm.SHA256, data)
+	data = bytes.concatenate([][]byte{transmute([]byte)type, []byte{0}, data})
+
+	hash_buffer: [32]byte
+	sha.hash_bytes_to_buffer(sha.Algorithm.SHA256, data, hash_buffer[:])
+	hash := hex.encode(hash_buffer[:])
 	defer delete(hash)
 
-	hash_str := hex.encode(hash)
-	defer delete(hash_str)
+	path = strings.concatenate([]string{path, "/", string(hash)}) or_else unreachable()
 
-	final_path := fmt.aprintf("%s/%s", path, hash_str)
-	defer delete(final_path)
-
-	success := os.write_entire_file(final_path, data)
+	success := os.write_entire_file(path, data)
 
 	if (!success) {
 		fmt.println("failed to save to git objects")
 		os.exit(1)
 	}
 
-	fmt.println(string(hash_str))
+	fmt.println(string(hash))
 	defer os.exit(0)
 
 }
@@ -98,15 +99,21 @@ cmd_hash_object :: proc(file_name: string) {
 cmd_cat_file :: proc(hash_str: string) {
 	hash := get_object(string(hash_str))
 	defer delete(hash)
+	defer 
 	fmt.println(string(hash))
 }
 
-get_object :: proc(hash: string) -> []u8 {
+get_object :: proc(hash: string, check: bool = false) -> []u8 {
 	os.change_directory(TEST_DIRECTORY)
 
 	path := fmt.aprintf("%s/%s", GIT_OJBECTS_DIR, hash)
-	defer delete(path)
+	defer {
+		delete(path)
+	}
+
 	data, ok := os.read_entire_file(path)
+
+	// fmt.aprintln()
 
 	if (!ok) {
 		fmt.println("\nFailed to cat-file")
