@@ -99,8 +99,11 @@ cmd_hash_object :: proc(file_name: string, type := "blob") {
 cmd_cat_file :: proc(hash_str: string) {
 	hash := get_object(string(hash_str))
 	defer delete(hash)
-	defer 
-	fmt.println(string(hash))
+
+	result := strings.split(string(hash), "\x00") or_else unreachable()
+	defer delete(result)
+
+	fmt.println((result[1]))
 }
 
 get_object :: proc(hash: string, check: bool = false) -> []u8 {
